@@ -5,30 +5,42 @@
     <title>APT QuickScan</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f8ff; text-align: center; }
+        header { background: #0056b3; color: white; padding: 15px; }
+        header img { height: 40px; vertical-align: middle; margin-right: 10px; }
+        header span { font-size: 1.4em; font-weight: bold; }
         .hidden { display: none; }
-        input { padding: 10px; margin: 5px; width: 80%; max-width: 300px; }
-        button { padding: 10px 20px; margin: 10px; background: #007BFF; color: white; border: none; border-radius: 5px; }
-        #preview { width: 100%; max-width: 400px; margin-top: 10px; }
+        input { padding: 10px; margin: 5px; width: 80%; max-width: 300px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 10px; background: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #preview { width: 100%; max-width: 400px; margin-top: 10px; border: 2px solid #007BFF; border-radius: 10px; }
+        .status { font-size: 1.1em; font-weight: bold; color: #0056b3; }
+        .success { color: green; }
+        .error { color: red; }
     </style>
 </head>
 <body>
 
-<h2>APT QuickScan</h2>
+<header>
+    <img src="https://i.ibb.co/zZJdMSN/APT-Logo.png" alt="APT Logo">
+    <span>APT QuickScan</span>
+</header>
 
 <!-- Login Screen -->
 <div id="loginScreen">
+    <h2>Coordinator Login</h2>
     <input type="text" id="coordID" placeholder="Coordinator ID"><br>
     <input type="password" id="coordPass" placeholder="Password"><br>
     <button onclick="login()">Login</button>
-    <p id="loginMessage"></p>
+    <p id="loginMessage" class="error"></p>
 </div>
 
 <!-- Scanner Screen -->
 <div id="scannerScreen" class="hidden">
     <h3>Welcome, <span id="coordName"></span></h3>
     <video id="preview"></video>
-    <p id="scanMessage"></p>
+    <p id="scanMessage" class="status"></p>
+    <p>Stock Remaining: <span id="stockRemaining">-</span></p>
     <button onclick="stopScanner()">Logout</button>
 </div>
 
@@ -79,7 +91,18 @@ async function sendScan(batchID) {
         body: JSON.stringify({ action: "scan", coordinatorID: loggedInID, batchID: batchID })
     });
     const data = await res.json();
-    document.getElementById("scanMessage").innerText = data.message;
+
+    if (data.success) {
+        document.getElementById("scanMessage").innerText = data.message;
+        document.getElementById("scanMessage").classList.add("success");
+        if (navigator.vibrate) navigator.vibrate(200);
+        if (data.remaining !== undefined) {
+            document.getElementById("stockRemaining").innerText = data.remaining;
+        }
+    } else {
+        document.getElementById("scanMessage").innerText = data.message;
+        document.getElementById("scanMessage").classList.add("error");
+    }
 }
 
 function stopScanner() {

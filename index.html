@@ -38,9 +38,12 @@
 <!-- Scanner Screen -->
 <div id="scannerScreen" class="hidden">
     <h3>Welcome, <span id="coordName"></span></h3>
-    <video id="preview"></video>
-    <p id="scanMessage" class="status"></p>
-    <p>Stock Remaining: <span id="stockRemaining">-</span></p>
+    <button id="startScanBtn">Start Scanning</button>
+    <div id="scannerArea" class="hidden">
+        <div id="preview"></div>
+        <p id="scanMessage" class="status"></p>
+        <p>Stock Remaining: <span id="stockRemaining">-</span></p>
+    </div>
     <button onclick="stopScanner()">Logout</button>
 </div>
 
@@ -50,6 +53,7 @@
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycby2ZmHjCcc9qmn3tpmxff49NoHrzrMAqPuTLKTDKnV77DcON6fLGuTC2EQAOtnlZ2E_sQ/exec";
 let loggedInID = "";
+let qrScanner; // store instance so we can stop it later
 
 async function login() {
     const id = document.getElementById("coordID").value.trim();
@@ -65,21 +69,25 @@ async function login() {
         document.getElementById("coordName").innerText = data.name;
         document.getElementById("loginScreen").classList.add("hidden");
         document.getElementById("scannerScreen").classList.remove("hidden");
-        startScanner();
     } else {
         document.getElementById("loginMessage").innerText = data.message;
     }
 }
 
+document.getElementById("startScanBtn").addEventListener("click", () => {
+    document.getElementById("startScanBtn").classList.add("hidden");
+    document.getElementById("scannerArea").classList.remove("hidden");
+    startScanner();
+});
+
 function startScanner() {
-    const html5QrCode = new Html5Qrcode("preview");
-    html5QrCode.start(
+    qrScanner = new Html5Qrcode("preview");
+    qrScanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
             sendScan(decodedText);
-            html5QrCode.stop();
-            startScanner();
+            qrScanner.stop().then(() => startScanner());
         },
         () => {}
     ).catch(err => console.error("Camera start failed", err));
@@ -94,6 +102,7 @@ async function sendScan(batchID) {
 
     if (data.success) {
         document.getElementById("scanMessage").innerText = data.message;
+        document.getElementById("scanMessage").classList.remove("error");
         document.getElementById("scanMessage").classList.add("success");
         if (navigator.vibrate) navigator.vibrate(200);
         if (data.remaining !== undefined) {
@@ -101,11 +110,13 @@ async function sendScan(batchID) {
         }
     } else {
         document.getElementById("scanMessage").innerText = data.message;
+        document.getElementById("scanMessage").classList.remove("success");
         document.getElementById("scanMessage").classList.add("error");
     }
 }
 
 function stopScanner() {
+    if (qrScanner) qrScanner.stop().catch(() => {});
     location.reload();
 }
 </script>

@@ -104,6 +104,7 @@ async function login() {
     const pass = document.getElementById("coordPass").value.trim();
     const res = await fetch(API_URL, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "login", id: id, password: pass })
     });
     const data = await res.json();
@@ -147,6 +148,7 @@ function startScanner() {
 async function sendScan(batchID) {
     const res = await fetch(API_URL, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "scan", coordinatorID: loggedInID, batchID: batchID })
     });
     const data = await res.json();
@@ -155,13 +157,14 @@ async function sendScan(batchID) {
         document.getElementById("scanMessage").innerText = data.message;
         document.getElementById("scanMessage").classList.add("success");
         if (navigator.vibrate) navigator.vibrate(200);
-        if (data.remaining !== undefined) {
-            document.getElementById("stockRemaining").innerText = data.remaining;
-        }
+
+        // keep remaining blank for manual entry
+        document.getElementById("stockRemaining").innerText = "-";
+        document.getElementById("remainingBooks").value = "";
+        
         lastBatchID = batchID;
-        document.getElementById("remainingBooks").value = data.remaining;
         document.getElementById("remainingInputSection").classList.remove("hidden");
-        showToast(`Scan recorded. Remaining: ${data.remaining}`, "success");
+        showToast(`Scan recorded for ${batchID}`, "success");
     } else {
         document.getElementById("scanMessage").innerText = data.message;
         document.getElementById("scanMessage").classList.add("error");
@@ -173,17 +176,18 @@ async function sendScan(batchID) {
 async function submitRemaining() {
     const remaining = document.getElementById("remainingBooks").value.trim();
     if (remaining === "" || isNaN(remaining)) {
-        alert("Please enter a valid number");
+        showToast("Please enter a valid number", "error");
         return;
     }
 
     const res = await fetch(API_URL, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             action: "updateRemaining",
             batchID: lastBatchID,
-            remaining: parseInt(remaining),
-            coordinatorID: loggedInID // ✅ Added coordinator ID
+            remaining: parseInt(remaining, 10),
+            coordinatorID: loggedInID
         })
     });
     const data = await res.json();

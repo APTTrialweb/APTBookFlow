@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>BookFlow — APT QuickScan (Fixed)</title>
+    <title>BookFlow — APT QuickScan (POST Fixed)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f8ff; text-align: center; }
@@ -33,8 +33,6 @@
 <body>
 
 <header>
-    <!-- Note: the logo URL is not important for functionality. If an image URL returns an HTML error page,
-         that won't affect API calls but will show in the console if you examine network. -->
     <img src="https://apt.shiksha/_next/image?url=%2Fimages%2Flogo-dark.png&w=256&q=75" alt="APT Logo">
     <span>BookFlow</span>
 </header>
@@ -67,29 +65,21 @@
 <!-- Toast Container -->
 <div id="toastContainer"></div>
 
-<!-- Debug area (hidden by default) -->
+<!-- Debug area -->
 <button id="debugToggle" onclick="toggleDebug()">Show debug response</button>
 <pre id="debugBox"></pre>
 
-<!-- QR Scanner Library -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
-/*
-  IMPORTANT:
-  - Replace API_URL with your Apps Script Web App URL (deployed & public).
-  - Make sure your Apps Script returns JSON responses and sets Access-Control-Allow-Origin header.
-  - This client reads raw text and attempts JSON.parse safely to avoid 'Unexpected token <' crashes.
-*/
-
-const API_URL = "https://script.google.com/macros/s/AKfycbwqjtyfcibWoJB_2Eo8WEEkYdcpHajoN77iEPwBoep7ji-2iye5in7d4-LKNiNQZQJjbw/exec"; // <-- replace if needed
+const API_URL = "https://script.google.com/macros/s/AKfycbwqjtyfcibWoJB_2Eo8WEEkYdcpHajoN77iEPwBoep7ji-2iye5in7d4-LKNiNQZQJjbw/exec";
 
 let loggedInID = "";
 let qrScanner = null;
 let lastBatchID = "";
 let lastRawResponse = "";
 
-function showToast(message, type = 'success') {
+function showToast(message, type='success') {
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
@@ -109,7 +99,6 @@ function toggleDebug() {
     }
 }
 
-// Robust POST helper — reads text before attempting JSON.parse
 async function apiPost(payload) {
     try {
         const res = await fetch(API_URL, {
@@ -123,10 +112,8 @@ async function apiPost(payload) {
         document.getElementById('debugBox').innerText = lastRawResponse;
 
         try {
-            const parsed = JSON.parse(text);
-            return { ok: res.ok, json: parsed, text, status: res.status, parseError: false };
-        } catch (err) {
-            // Not JSON — return helpful info instead of throwing
+            return { ok: res.ok, json: JSON.parse(text), text, status: res.status, parseError: false };
+        } catch {
             return { ok: res.ok, json: null, text, status: res.status, parseError: true };
         }
     } catch (err) {
@@ -136,41 +123,31 @@ async function apiPost(payload) {
     }
 }
 
-/* ========== Actions ========== */
-
 async function login() {
     const id = document.getElementById('coordID').value.trim();
     const pass = document.getElementById('coordPass').value.trim();
-    if (!id || !pass) { showToast('Please enter ID and password', 'error'); return; }
+    if (!id || !pass) return showToast('Please enter ID and password', 'error');
 
     const res = await apiPost({ action: 'login', id, password: pass });
 
-    if (!res.ok) {
-        if (res.parseError) {
-            showToast('Server returned non-JSON. Open debug to inspect.', 'error');
-            if (document.getElementById('debugBox').style.display === 'none') toggleDebug();
-            return;
-        }
-        showToast('Login failed: HTTP ' + res.status, 'error');
+    if (!res.ok || res.parseError || !res.json) {
+        showToast('Login failed — check debug', 'error');
+        toggleDebug();
         return;
     }
 
-    const data = res.json;
-    if (!data) { showToast('Empty JSON response. Open debug to inspect.', 'error'); toggleDebug(); return; }
-
-    if (data.success) {
+    if (res.json.success) {
         loggedInID = id;
-        document.getElementById('coordName').innerText = data.name || id;
+        document.getElementById('coordName').innerText = res.json.name || id;
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('scannerScreen').classList.remove('hidden');
-        showToast('Welcome ' + (data.name || id), 'success');
+        showToast('Welcome ' + (res.json.name || id), 'success');
     } else {
-        document.getElementById('loginMessage').innerText = data.message || 'Invalid credentials';
-        showToast(data.message || 'Invalid credentials', 'error');
+        document.getElementById('loginMessage').innerText = res.json.message || 'Invalid credentials';
+        showToast(res.json.message || 'Invalid credentials', 'error');
     }
 }
 
-// Start scanning only after user click
 document.getElementById('startScanBtn').addEventListener('click', () => {
     document.getElementById('startScanBtn').classList.add('hidden');
     document.getElementById('scannerArea').classList.remove('hidden');
@@ -179,100 +156,70 @@ document.getElementById('startScanBtn').addEventListener('click', () => {
 
 function startScanner() {
     if (qrScanner) return;
-
     qrScanner = new Html5Qrcode('preview');
     qrScanner.start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
-            // stop & show buffer
             qrScanner.stop().catch(()=>{});
             document.getElementById('scanMessage').innerText = 'Processing...';
-            document.getElementById('scanMessage').classList.remove('error','success');
-            setTimeout(() => sendScan(decodedText), 2000); // 2s buffer
-        },
-        (err) => {}
-    ).catch(err => {
-        console.error('camera start failed', err);
-        showToast('Camera access failed: ' + (err.message || err), 'error');
-    });
+            setTimeout(() => sendScan(decodedText), 2000);
+        }
+    ).catch(err => showToast('Camera failed: ' + err, 'error'));
 }
 
 async function sendScan(batchID) {
-    if (!loggedInID) { showToast('Please login first', 'error'); return; }
+    if (!loggedInID) return showToast('Please login first', 'error');
 
     const res = await apiPost({ action: 'scan', coordinatorID: loggedInID, batchID });
 
-    if (!res.ok) {
-        if (res.parseError) {
-            showToast('Server returned non-JSON for scan. Open debug to inspect.', 'error');
-            if (document.getElementById('debugBox').style.display === 'none') toggleDebug();
-            return;
-        }
-        showToast('Scan request failed: HTTP ' + res.status, 'error');
+    if (!res.ok || res.parseError || !res.json) {
+        showToast('Scan failed — check debug', 'error');
+        toggleDebug();
         return;
     }
 
-    const data = res.json;
-    if (!data) { showToast('Empty JSON from server', 'error'); toggleDebug(); return; }
-
-    if (data.success) {
-        document.getElementById('scanMessage').innerText = data.message || 'Scan recorded';
+    if (res.json.success) {
+        document.getElementById('scanMessage').innerText = res.json.message || 'Scan recorded';
         document.getElementById('scanMessage').classList.add('success');
         if (navigator.vibrate) navigator.vibrate(200);
-
-        // keep remaining blank for manual entry
         document.getElementById('stockRemaining').innerText = '-';
         document.getElementById('remainingBooks').value = '';
-
         lastBatchID = batchID;
         document.getElementById('remainingInputSection').classList.remove('hidden');
         showToast('Scan recorded for ' + batchID, 'success');
-
     } else {
-        document.getElementById('scanMessage').innerText = data.message || 'Scan failed';
+        document.getElementById('scanMessage').innerText = res.json.message || 'Scan failed';
         document.getElementById('scanMessage').classList.add('error');
-        showToast(data.message || 'Scan failed', 'error');
-        // restart scanner
+        showToast(res.json.message || 'Scan failed', 'error');
         qrScanner = null;
         startScanner();
     }
 }
 
 async function submitRemaining() {
-    const remainingRaw = document.getElementById('remainingBooks').value.trim();
-    if (remainingRaw === '' || isNaN(remainingRaw)) { showToast('Please enter a valid number', 'error'); return; }
+    const val = document.getElementById('remainingBooks').value.trim();
+    if (val === '' || isNaN(val)) return showToast('Please enter a valid number', 'error');
 
-    const remaining = parseInt(remainingRaw, 10);
-    const payload = { action: 'updateRemaining', batchID: lastBatchID, remaining, coordinatorID: loggedInID };
+    const res = await apiPost({ action: 'updateRemaining', batchID: lastBatchID, remaining: parseInt(val, 10), coordinatorID: loggedInID });
 
-    const res = await apiPost(payload);
-
-    if (!res.ok) {
-        if (res.parseError) {
-            showToast('Server returned non-JSON for update. Open debug to inspect.', 'error');
-            if (document.getElementById('debugBox').style.display === 'none') toggleDebug();
-            return;
-        }
-        showToast('Update request failed: HTTP ' + res.status, 'error');
+    if (!res.ok || res.parseError || !res.json) {
+        showToast('Update failed — check debug', 'error');
+        toggleDebug();
         return;
     }
 
-    const data = res.json;
-    if (!data) { showToast('Empty JSON from server', 'error'); toggleDebug(); return; }
-
-    if (data.success) {
-        document.getElementById('scanMessage').innerText = data.message || 'Remaining updated';
+    if (res.json.success) {
+        document.getElementById('scanMessage').innerText = res.json.message || 'Remaining updated';
         document.getElementById('scanMessage').classList.add('success');
         document.getElementById('remainingInputSection').classList.add('hidden');
-        showToast(data.message || 'Remaining updated', 'success');
-        // restart scanner for next batch
+        showToast(res.json.message || 'Remaining updated', 'success');
         qrScanner = null;
         startScanner();
     } else {
-        document.getElementById('scanMessage').innerText = data.message || 'Update failed';
+        document.getElementById('scanMessage').innerText = res.json.message || 'Update failed';
         document.getElementById('scanMessage').classList.add('error');
-        showToast(data.message || 'Update failed', 'error');
+        showToast(res.json.message || 'Update failed', 'error');
     }
 }
 
@@ -280,7 +227,6 @@ function stopScanner() {
     if (qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner = null; }
     location.reload();
 }
-
 </script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>BookFlow</title>
+    <title>BookFlow — APT QuickScan (Fixed)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f8ff; text-align: center; }
@@ -17,16 +17,24 @@
         .status { font-size: 1.1em; font-weight: bold; color: #0056b3; }
         .success { color: green; }
         .error { color: red; }
+
+        /* Toast styles */
         #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 1000; }
         .toast { padding: 12px 18px; margin-top: 10px; border-radius: 6px; color: white; min-width: 200px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.2); animation: fadeInOut 3s forwards; }
         .toast.success { background-color: #28a745; }
         .toast.error { background-color: #dc3545; }
         @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(-10px); } 10%, 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-10px); } }
+
+        /* Debug area */
+        #debugBox { width: 90%; max-width: 900px; margin: 12px auto; background: #fff; color: #111; padding: 10px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); text-align: left; display:none; white-space: pre-wrap; overflow:auto; max-height:300px; }
+        #debugToggle { font-size: 12px; color:#0056b3; cursor:pointer; background:none; border:none; }
     </style>
 </head>
 <body>
 
 <header>
+    <!-- Note: the logo URL is not important for functionality. If an image URL returns an HTML error page,
+         that won't affect API calls but will show in the console if you examine network. -->
     <img src="https://apt.shiksha/_next/image?url=%2Fimages%2Flogo-dark.png&w=256&q=75" alt="APT Logo">
     <span>BookFlow</span>
 </header>
@@ -59,137 +67,220 @@
 <!-- Toast Container -->
 <div id="toastContainer"></div>
 
+<!-- Debug area (hidden by default) -->
+<button id="debugToggle" onclick="toggleDebug()">Show debug response</button>
+<pre id="debugBox"></pre>
+
 <!-- QR Scanner Library -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycby2ZmHjCcc9qmn3tpmxff49NoHrzrMAqPuTLKTDKnV77DcON6fLGuTC2EQAOtnlZ2E_sQ/exec"; // Replace with actual deployed Apps Script URL
-let loggedInID = "";
-let qrScanner;
-let lastBatchID = "";
+/*
+  IMPORTANT:
+  - Replace API_URL with your Apps Script Web App URL (deployed & public).
+  - Make sure your Apps Script returns JSON responses and sets Access-Control-Allow-Origin header.
+  - This client reads raw text and attempts JSON.parse safely to avoid 'Unexpected token <' crashes.
+*/
 
-// Toast
-function showToast(message, type = "success") {
-    const toastContainer = document.getElementById("toastContainer");
-    const toast = document.createElement("div");
+const API_URL = "https://script.google.com/macros/s/AKfycby2ZmHjCcc9qmn3tpmxff49NoHrzrMAqPuTLKTDKnV77DcON6fLGuTC2EQAOtnlZ2E_sQ/exec"; // <-- replace if needed
+
+let loggedInID = "";
+let qrScanner = null;
+let lastBatchID = "";
+let lastRawResponse = "";
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerText = message;
-    toastContainer.appendChild(toast);
+    container.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
 
-// Login
-async function login() {
-    const id = document.getElementById("coordID").value.trim();
-    const pass = document.getElementById("coordPass").value.trim();
-    if (!id || !pass) { showToast("Enter ID & Password", "error"); return; }
-
-    const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "login", id: id, password: pass })
-    });
-    const data = await res.json();
-
-    if (data.success) {
-        loggedInID = id;
-        document.getElementById("coordName").innerText = data.name;
-        document.getElementById("loginScreen").classList.add("hidden");
-        document.getElementById("scannerScreen").classList.remove("hidden");
-        showToast(`Welcome ${data.name}!`, "success");
+function toggleDebug() {
+    const box = document.getElementById('debugBox');
+    if (box.style.display === 'none' || box.style.display === '') {
+        box.style.display = 'block';
+        document.getElementById('debugToggle').innerText = 'Hide debug response';
     } else {
-        document.getElementById("loginMessage").innerText = data.message;
-        showToast(data.message, "error");
+        box.style.display = 'none';
+        document.getElementById('debugToggle').innerText = 'Show debug response';
     }
 }
 
-document.getElementById("startScanBtn").addEventListener("click", () => {
-    document.getElementById("startScanBtn").classList.add("hidden");
-    document.getElementById("scannerArea").classList.remove("hidden");
+// Robust POST helper — reads text before attempting JSON.parse
+async function apiPost(payload) {
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();
+        lastRawResponse = `HTTP ${res.status} ${res.statusText}\n\n` + text;
+        document.getElementById('debugBox').innerText = lastRawResponse;
+
+        try {
+            const parsed = JSON.parse(text);
+            return { ok: res.ok, json: parsed, text, status: res.status, parseError: false };
+        } catch (err) {
+            // Not JSON — return helpful info instead of throwing
+            return { ok: res.ok, json: null, text, status: res.status, parseError: true };
+        }
+    } catch (err) {
+        lastRawResponse = `Fetch error: ${err.message}`;
+        document.getElementById('debugBox').innerText = lastRawResponse;
+        return { ok: false, json: null, text: lastRawResponse, status: 0, parseError: true };
+    }
+}
+
+/* ========== Actions ========== */
+
+async function login() {
+    const id = document.getElementById('coordID').value.trim();
+    const pass = document.getElementById('coordPass').value.trim();
+    if (!id || !pass) { showToast('Please enter ID and password', 'error'); return; }
+
+    const res = await apiPost({ action: 'login', id, password: pass });
+
+    if (!res.ok) {
+        if (res.parseError) {
+            showToast('Server returned non-JSON. Open debug to inspect.', 'error');
+            if (document.getElementById('debugBox').style.display === 'none') toggleDebug();
+            return;
+        }
+        showToast('Login failed: HTTP ' + res.status, 'error');
+        return;
+    }
+
+    const data = res.json;
+    if (!data) { showToast('Empty JSON response. Open debug to inspect.', 'error'); toggleDebug(); return; }
+
+    if (data.success) {
+        loggedInID = id;
+        document.getElementById('coordName').innerText = data.name || id;
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('scannerScreen').classList.remove('hidden');
+        showToast('Welcome ' + (data.name || id), 'success');
+    } else {
+        document.getElementById('loginMessage').innerText = data.message || 'Invalid credentials';
+        showToast(data.message || 'Invalid credentials', 'error');
+    }
+}
+
+// Start scanning only after user click
+document.getElementById('startScanBtn').addEventListener('click', () => {
+    document.getElementById('startScanBtn').classList.add('hidden');
+    document.getElementById('scannerArea').classList.remove('hidden');
     startScanner();
 });
 
 function startScanner() {
-    qrScanner = new Html5Qrcode("preview");
+    if (qrScanner) return;
+
+    qrScanner = new Html5Qrcode('preview');
     qrScanner.start(
-        { facingMode: "environment" },
+        { facingMode: 'environment' },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
-            qrScanner.stop();
-            document.getElementById("scanMessage").innerText = "Processing...";
-            document.getElementById("scanMessage").classList.remove("error", "success");
-
-            setTimeout(() => { sendScan(decodedText); }, 800);
+            // stop & show buffer
+            qrScanner.stop().catch(()=>{});
+            document.getElementById('scanMessage').innerText = 'Processing...';
+            document.getElementById('scanMessage').classList.remove('error','success');
+            setTimeout(() => sendScan(decodedText), 2000); // 2s buffer
         },
-        () => {}
-    ).catch(err => console.error("Camera start failed", err));
+        (err) => {}
+    ).catch(err => {
+        console.error('camera start failed', err);
+        showToast('Camera access failed: ' + (err.message || err), 'error');
+    });
 }
 
 async function sendScan(batchID) {
-    const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "scan", coordinatorID: loggedInID, batchID: batchID })
-    });
-    const data = await res.json();
+    if (!loggedInID) { showToast('Please login first', 'error'); return; }
+
+    const res = await apiPost({ action: 'scan', coordinatorID: loggedInID, batchID });
+
+    if (!res.ok) {
+        if (res.parseError) {
+            showToast('Server returned non-JSON for scan. Open debug to inspect.', 'error');
+            if (document.getElementById('debugBox').style.display === 'none') toggleDebug();
+            return;
+        }
+        showToast('Scan request failed: HTTP ' + res.status, 'error');
+        return;
+    }
+
+    const data = res.json;
+    if (!data) { showToast('Empty JSON from server', 'error'); toggleDebug(); return; }
 
     if (data.success) {
-        document.getElementById("scanMessage").innerText = data.message;
-        document.getElementById("scanMessage").classList.add("success");
+        document.getElementById('scanMessage').innerText = data.message || 'Scan recorded';
+        document.getElementById('scanMessage').classList.add('success');
         if (navigator.vibrate) navigator.vibrate(200);
 
-        // Fill remaining from server
-        document.getElementById("stockRemaining").innerText = data.remaining ?? "-";
-        document.getElementById("remainingBooks").value = data.remaining ?? "";
+        // keep remaining blank for manual entry
+        document.getElementById('stockRemaining').innerText = '-';
+        document.getElementById('remainingBooks').value = '';
 
         lastBatchID = batchID;
-        document.getElementById("remainingInputSection").classList.remove("hidden");
-        showToast(`Scan recorded for ${batchID}`, "success");
+        document.getElementById('remainingInputSection').classList.remove('hidden');
+        showToast('Scan recorded for ' + batchID, 'success');
+
     } else {
-        document.getElementById("scanMessage").innerText = data.message;
-        document.getElementById("scanMessage").classList.add("error");
-        showToast(data.message, "error");
+        document.getElementById('scanMessage').innerText = data.message || 'Scan failed';
+        document.getElementById('scanMessage').classList.add('error');
+        showToast(data.message || 'Scan failed', 'error');
+        // restart scanner
+        qrScanner = null;
         startScanner();
     }
 }
 
 async function submitRemaining() {
-    const remaining = document.getElementById("remainingBooks").value.trim();
-    if (remaining === "" || isNaN(remaining)) {
-        showToast("Please enter a valid number", "error");
+    const remainingRaw = document.getElementById('remainingBooks').value.trim();
+    if (remainingRaw === '' || isNaN(remainingRaw)) { showToast('Please enter a valid number', 'error'); return; }
+
+    const remaining = parseInt(remainingRaw, 10);
+    const payload = { action: 'updateRemaining', batchID: lastBatchID, remaining, coordinatorID: loggedInID };
+
+    const res = await apiPost(payload);
+
+    if (!res.ok) {
+        if (res.parseError) {
+            showToast('Server returned non-JSON for update. Open debug to inspect.', 'error');
+            if (document.getElementById('debugBox').style.display === 'none') toggleDebug();
+            return;
+        }
+        showToast('Update request failed: HTTP ' + res.status, 'error');
         return;
     }
 
-    const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            action: "updateRemaining",
-            batchID: lastBatchID,
-            remaining: parseInt(remaining, 10),
-            coordinatorID: loggedInID
-        })
-    });
-    const data = await res.json();
+    const data = res.json;
+    if (!data) { showToast('Empty JSON from server', 'error'); toggleDebug(); return; }
 
     if (data.success) {
-        document.getElementById("scanMessage").innerText = data.message;
-        document.getElementById("scanMessage").classList.add("success");
-        document.getElementById("remainingInputSection").classList.add("hidden");
-        showToast(data.message, "success");
+        document.getElementById('scanMessage').innerText = data.message || 'Remaining updated';
+        document.getElementById('scanMessage').classList.add('success');
+        document.getElementById('remainingInputSection').classList.add('hidden');
+        showToast(data.message || 'Remaining updated', 'success');
+        // restart scanner for next batch
+        qrScanner = null;
         startScanner();
     } else {
-        document.getElementById("scanMessage").innerText = data.message;
-        document.getElementById("scanMessage").classList.add("error");
-        showToast(data.message, "error");
+        document.getElementById('scanMessage').innerText = data.message || 'Update failed';
+        document.getElementById('scanMessage').classList.add('error');
+        showToast(data.message || 'Update failed', 'error');
     }
 }
 
 function stopScanner() {
-    if (qrScanner) qrScanner.stop().catch(() => {});
+    if (qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner = null; }
     location.reload();
 }
-</script>
 
+</script>
 </body>
 </html>

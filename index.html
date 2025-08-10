@@ -17,32 +17,11 @@
         .status { font-size: 1.1em; font-weight: bold; color: #0056b3; }
         .success { color: green; }
         .error { color: red; }
-
-        /* Toast styles */
-        #toastContainer {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        .toast {
-            padding: 12px 18px;
-            margin-top: 10px;
-            border-radius: 6px;
-            color: white;
-            min-width: 200px;
-            text-align: left;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            animation: fadeInOut 3s forwards;
-        }
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        .toast { padding: 12px 18px; margin-top: 10px; border-radius: 6px; color: white; min-width: 200px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.2); animation: fadeInOut 3s forwards; }
         .toast.success { background-color: #28a745; }
         .toast.error { background-color: #dc3545; }
-
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(-10px); }
-            10%, 90% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-10px); }
-        }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(-10px); } 10%, 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-10px); } }
     </style>
 </head>
 <body>
@@ -84,12 +63,12 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycby2ZmHjCcc9qmn3tpmxff49NoHrzrMAqPuTLKTDKnV77DcON6fLGuTC2EQAOtnlZ2E_sQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby2ZmHjCcc9qmn3tpmxff49NoHrzrMAqPuTLKTDKnV77DcON6fLGuTC2EQAOtnlZ2E_sQ/exec"; // Replace with actual deployed Apps Script URL
 let loggedInID = "";
 let qrScanner;
 let lastBatchID = "";
 
-// Toast function
+// Toast
 function showToast(message, type = "success") {
     const toastContainer = document.getElementById("toastContainer");
     const toast = document.createElement("div");
@@ -99,9 +78,12 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.remove(), 3000);
 }
 
+// Login
 async function login() {
     const id = document.getElementById("coordID").value.trim();
     const pass = document.getElementById("coordPass").value.trim();
+    if (!id || !pass) { showToast("Enter ID & Password", "error"); return; }
+
     const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -137,9 +119,7 @@ function startScanner() {
             document.getElementById("scanMessage").innerText = "Processing...";
             document.getElementById("scanMessage").classList.remove("error", "success");
 
-            setTimeout(() => {
-                sendScan(decodedText);
-            }, 2000); // 2s delay
+            setTimeout(() => { sendScan(decodedText); }, 800);
         },
         () => {}
     ).catch(err => console.error("Camera start failed", err));
@@ -158,10 +138,10 @@ async function sendScan(batchID) {
         document.getElementById("scanMessage").classList.add("success");
         if (navigator.vibrate) navigator.vibrate(200);
 
-        // keep remaining blank for manual entry
-        document.getElementById("stockRemaining").innerText = "-";
-        document.getElementById("remainingBooks").value = "";
-        
+        // Fill remaining from server
+        document.getElementById("stockRemaining").innerText = data.remaining ?? "-";
+        document.getElementById("remainingBooks").value = data.remaining ?? "";
+
         lastBatchID = batchID;
         document.getElementById("remainingInputSection").classList.remove("hidden");
         showToast(`Scan recorded for ${batchID}`, "success");

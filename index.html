@@ -70,7 +70,7 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwkH-wRUy_GcZMVzgr8uzxBGYpF_Z0K6TaTwPm3xTSHzM6YOYU8R0KmLBMF1Lcz1En3/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwkH-wRUy_GcZMVzgr8uzxBGYpF_Z0K6TaTwPm3xTSHzM6YOYU8R0KmLBMF1Lcz1En3/exec"; // Replace with your Google Apps Script URL
 
 let loggedInID = "";
 let qrScanner = null;
@@ -142,37 +142,30 @@ async function login() {
         document.getElementById('coordName').innerText = res.json.name || id;
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('scannerScreen').classList.remove('hidden');
-        showToast('Welcome ' + (res.json.name || id), 'success');
+        showToast('Login successful');
     } else {
-        document.getElementById('loginMessage').innerText = res.json.message || 'Invalid credentials';
-        showToast(res.json.message || 'Invalid credentials', 'error');
+        document.getElementById('loginMessage').innerText = res.json.error || 'Login failed';
     }
 }
 
-document.getElementById('startScanBtn').addEventListener('click', () => {
-    document.getElementById('startScanBtn').classList.add('hidden');
-    document.getElementById('scannerArea').classList.remove('hidden');
-    startScanner();
-});
-
-function startScanner() {
-    if (qrScanner) return;
-    qrScanner = new Html5Qrcode('preview');
-    qrScanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: 250 },
-        (decodedText) => {
-            qrScanner.stop().catch(() => {});
-            document.getElementById('scanMessage').innerText = 'Processing...';
-            setTimeout(() => sendScan(decodedText), 500);
-        }
-    ).catch(err => showToast('Camera failed: ' + err, 'error'));
+function logout() {
+    loggedInID = '';
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('scannerScreen').classList.add('hidden');
 }
 
-async function sendScan(batchID) {
-    if (!loggedInID) return showToast('Please login first', 'error');
+async function startScan() {
+    qrScanner = new Html5QrcodeScanner("scannerArea", { fps: 10, qrbox: 250 });
+    qrScanner.render(onScanSuccess, onScanFailure);
+}
 
-    const res = await apiPost({ action: 'scan', coordinatorID: loggedInID, batchID });
+async function onScanSuccess(decodedText, decodedResult) {
+    const batchID = decodedText.trim();
+    if (batchID === lastBatchID) return;
+    lastBatchID = batchID;
+
+    document.getElementById('scanMessage').innerText = `Scanning: ${batchID}`;
+    const res = await apiPost({ action: 'scan', batchID, coordinatorID: loggedInID });
 
     if (!res.ok || res.parseError || !res.json) {
         showToast('Scan failed — check debug', 'error');
@@ -180,76 +173,35 @@ async function sendScan(batchID) {
         return;
     }
 
-    if (res.json.success) {
-        document.getElementById('scanMessage').innerText = res.json.message || 'Scan recorded';
-        document.getElementById('scanMessage').classList.remove('error');
-        document.getElementById('scanMessage').classList.add('success');
-        if (navigator.vibrate) navigator.vibrate(200);
-        document.getElementById('stockRemaining').innerText = res.json.remaining || '-';
-        document.getElementById('remainingBooks').value = '';
-        lastBatchID = batchID;
+    const { status, stockRemaining } = res.json;
+    if (status === 'SUCCESS') {
+        document.getElementById('scanMessage').innerText = `Scan successful! Stock remaining: ${stockRemaining}`;
+        document.getElementById('remainingBooks').value = stockRemaining;
         document.getElementById('remainingInputSection').classList.remove('hidden');
-        showToast('Scan recorded for ' + batchID, 'success');
     } else {
-        document.getElementById('scanMessage').innerText = res.json.message || 'Scan failed';
-        document.getElementById('scanMessage').classList.remove('success');
-        document.getElementById('scanMessage').classList.add('error');
-        showToast(res.json.message || 'Scan failed', 'error');
-        qrScanner = null;
-        startScanner();
+        showToast('Scan failed: ' + status, 'error');
     }
 }
 
 async function submitRemaining() {
-    const val = document.getElementById('remainingBooks').value.trim();
-    if (val === '' || isNaN(val)) {
-        showToast('Please enter a valid number', 'error');
+    const remainingBooks = document.getElementById('remainingBooks').value.trim();
+    if (!remainingBooks) {
+        showToast('Please enter the remaining stock', 'error');
         return;
     }
 
-    const res = await apiPost({ action: 'updateRemaining', batchID: lastBatchID, remaining: parseInt(val, 10), coordinatorID: loggedInID });
-
+    const res = await apiPost({ action: 'updateRemaining', batchID: lastBatchID, remainingBooks });
     if (!res.ok || res.parseError || !res.json) {
         showToast('Update failed — check debug', 'error');
         toggleDebug();
         return;
     }
 
-    if (res.json.success) {
-        document.getElementById('scanMessage').innerText = res.json.message || 'Remaining updated';
-        document.getElementById('scanMessage').classList.remove('error');
-        document.getElementById('scanMessage').classList.add('success');
-        document.getElementById('remainingInputSection').classList.add('hidden');
-        showToast(res.json.message || 'Remaining updated', 'success');
-        qrScanner = null;
-        startScanner();
-    } else {
-        document.getElementById('scanMessage').innerText = res.json.message || 'Update failed';
-        document.getElementById('scanMessage').classList.remove('success');
-        document.getElementById('scanMessage').classList.add('error');
-        showToast(res.json.message || 'Update failed', 'error');
-    }
+    showToast('Remaining stock updated!');
 }
 
-function logout() {
-    if (qrScanner) { 
-        qrScanner.stop().catch(() => {}); 
-        qrScanner = null; 
-    }
-    loggedInID = "";
-    lastBatchID = "";
-    document.getElementById('loginScreen').classList.remove('hidden');
-    document.getElementById('scannerScreen').classList.add('hidden');
-    document.getElementById('startScanBtn').classList.remove('hidden');
-    document.getElementById('scannerArea').classList.add('hidden');
-    document.getElementById('scanMessage').innerText = "";
-    document.getElementById('stockRemaining').innerText = "-";
-    document.getElementById('remainingInputSection').classList.add('hidden');
-    document.getElementById('coordID').value = "";
-    document.getElementById('coordPass').value = "";
-    document.getElementById('loginMessage').innerText = "";
-}
+document.getElementById('startScanBtn').addEventListener('click', startScan);
+
 </script>
-
 </body>
 </html>

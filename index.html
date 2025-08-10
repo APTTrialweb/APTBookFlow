@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>BookFlow — APT QuickScan (POST Fixed)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <title>BookFlow — APT QuickScan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f8ff; text-align: center; }
         header { background: #0056b3; color: white; padding: 15px; }
@@ -18,14 +18,12 @@
         .success { color: green; }
         .error { color: red; }
 
-        /* Toast styles */
         #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 1000; }
         .toast { padding: 12px 18px; margin-top: 10px; border-radius: 6px; color: white; min-width: 200px; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.2); animation: fadeInOut 3s forwards; }
         .toast.success { background-color: #28a745; }
         .toast.error { background-color: #dc3545; }
         @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(-10px); } 10%, 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-10px); } }
 
-        /* Debug area */
         #debugBox { width: 90%; max-width: 900px; margin: 12px auto; background: #fff; color: #111; padding: 10px; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); text-align: left; display:none; white-space: pre-wrap; overflow:auto; max-height:300px; }
         #debugToggle { font-size: 12px; color:#0056b3; cursor:pointer; background:none; border:none; }
     </style>
@@ -33,15 +31,15 @@
 <body>
 
 <header>
-    <img src="https://apt.shiksha/_next/image?url=%2Fimages%2Flogo-dark.png&w=256&q=75" alt="APT Logo">
+    <img src="https://apt.shiksha/_next/image?url=%2Fimages%2Flogo-dark.png&w=256&q=75" alt="APT Logo" />
     <span>BookFlow</span>
 </header>
 
 <!-- Login Screen -->
 <div id="loginScreen">
     <h2>Coordinator Login</h2>
-    <input type="text" id="coordID" placeholder="Coordinator ID"><br>
-    <input type="password" id="coordPass" placeholder="Password"><br>
+    <input type="text" id="coordID" placeholder="Coordinator ID" /><br />
+    <input type="password" id="coordPass" placeholder="Password" /><br />
     <button onclick="login()">Login</button>
     <p id="loginMessage" class="error"></p>
 </div>
@@ -55,11 +53,11 @@
         <p id="scanMessage" class="status"></p>
         <p>Stock Remaining: <span id="stockRemaining">-</span></p>
         <div id="remainingInputSection" class="hidden">
-            <input type="number" id="remainingBooks" placeholder="Enter remaining books" min="0">
+            <input type="number" id="remainingBooks" placeholder="Enter remaining books" min="0" />
             <button onclick="submitRemaining()">Submit Remaining</button>
         </div>
     </div>
-    <button onclick="stopScanner()">Logout</button>
+    <button onclick="logout()">Logout</button>
 </div>
 
 <!-- Toast Container -->
@@ -104,7 +102,7 @@ async function apiPost(payload) {
         const res = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
         });
 
         const text = await res.text();
@@ -126,7 +124,10 @@ async function apiPost(payload) {
 async function login() {
     const id = document.getElementById('coordID').value.trim();
     const pass = document.getElementById('coordPass').value.trim();
-    if (!id || !pass) return showToast('Please enter ID and password', 'error');
+    if (!id || !pass) {
+        showToast('Please enter ID and password', 'error');
+        return;
+    }
 
     const res = await apiPost({ action: 'login', id, password: pass });
 
@@ -161,9 +162,9 @@ function startScanner() {
         { facingMode: 'environment' },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
-            qrScanner.stop().catch(()=>{});
+            qrScanner.stop().catch(() => {});
             document.getElementById('scanMessage').innerText = 'Processing...';
-            setTimeout(() => sendScan(decodedText), 2000);
+            setTimeout(() => sendScan(decodedText), 500);
         }
     ).catch(err => showToast('Camera failed: ' + err, 'error'));
 }
@@ -181,15 +182,17 @@ async function sendScan(batchID) {
 
     if (res.json.success) {
         document.getElementById('scanMessage').innerText = res.json.message || 'Scan recorded';
+        document.getElementById('scanMessage').classList.remove('error');
         document.getElementById('scanMessage').classList.add('success');
         if (navigator.vibrate) navigator.vibrate(200);
-        document.getElementById('stockRemaining').innerText = '-';
+        document.getElementById('stockRemaining').innerText = res.json.remaining || '-';
         document.getElementById('remainingBooks').value = '';
         lastBatchID = batchID;
         document.getElementById('remainingInputSection').classList.remove('hidden');
         showToast('Scan recorded for ' + batchID, 'success');
     } else {
         document.getElementById('scanMessage').innerText = res.json.message || 'Scan failed';
+        document.getElementById('scanMessage').classList.remove('success');
         document.getElementById('scanMessage').classList.add('error');
         showToast(res.json.message || 'Scan failed', 'error');
         qrScanner = null;
@@ -199,7 +202,10 @@ async function sendScan(batchID) {
 
 async function submitRemaining() {
     const val = document.getElementById('remainingBooks').value.trim();
-    if (val === '' || isNaN(val)) return showToast('Please enter a valid number', 'error');
+    if (val === '' || isNaN(val)) {
+        showToast('Please enter a valid number', 'error');
+        return;
+    }
 
     const res = await apiPost({ action: 'updateRemaining', batchID: lastBatchID, remaining: parseInt(val, 10), coordinatorID: loggedInID });
 
@@ -211,6 +217,7 @@ async function submitRemaining() {
 
     if (res.json.success) {
         document.getElementById('scanMessage').innerText = res.json.message || 'Remaining updated';
+        document.getElementById('scanMessage').classList.remove('error');
         document.getElementById('scanMessage').classList.add('success');
         document.getElementById('remainingInputSection').classList.add('hidden');
         showToast(res.json.message || 'Remaining updated', 'success');
@@ -218,15 +225,31 @@ async function submitRemaining() {
         startScanner();
     } else {
         document.getElementById('scanMessage').innerText = res.json.message || 'Update failed';
+        document.getElementById('scanMessage').classList.remove('success');
         document.getElementById('scanMessage').classList.add('error');
         showToast(res.json.message || 'Update failed', 'error');
     }
 }
 
-function stopScanner() {
-    if (qrScanner) { qrScanner.stop().catch(()=>{}); qrScanner = null; }
-    location.reload();
+function logout() {
+    if (qrScanner) { 
+        qrScanner.stop().catch(() => {}); 
+        qrScanner = null; 
+    }
+    loggedInID = "";
+    lastBatchID = "";
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('scannerScreen').classList.add('hidden');
+    document.getElementById('startScanBtn').classList.remove('hidden');
+    document.getElementById('scannerArea').classList.add('hidden');
+    document.getElementById('scanMessage').innerText = "";
+    document.getElementById('stockRemaining').innerText = "-";
+    document.getElementById('remainingInputSection').classList.add('hidden');
+    document.getElementById('coordID').value = "";
+    document.getElementById('coordPass').value = "";
+    document.getElementById('loginMessage').innerText = "";
 }
 </script>
+
 </body>
 </html>

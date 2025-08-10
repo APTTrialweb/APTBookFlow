@@ -17,6 +17,32 @@
         .status { font-size: 1.1em; font-weight: bold; color: #0056b3; }
         .success { color: green; }
         .error { color: red; }
+
+        /* Toast styles */
+        #toastContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .toast {
+            padding: 12px 18px;
+            margin-top: 10px;
+            border-radius: 6px;
+            color: white;
+            min-width: 200px;
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            animation: fadeInOut 3s forwards;
+        }
+        .toast.success { background-color: #28a745; }
+        .toast.error { background-color: #dc3545; }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-10px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
     </style>
 </head>
 <body>
@@ -51,6 +77,9 @@
     <button onclick="stopScanner()">Logout</button>
 </div>
 
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+
 <!-- QR Scanner Library -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -59,6 +88,16 @@ const API_URL = "https://script.google.com/macros/s/AKfycby2ZmHjCcc9qmn3tpmxff49
 let loggedInID = "";
 let qrScanner;
 let lastBatchID = "";
+
+// Toast function
+function showToast(message, type = "success") {
+    const toastContainer = document.getElementById("toastContainer");
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
 
 async function login() {
     const id = document.getElementById("coordID").value.trim();
@@ -74,8 +113,10 @@ async function login() {
         document.getElementById("coordName").innerText = data.name;
         document.getElementById("loginScreen").classList.add("hidden");
         document.getElementById("scannerScreen").classList.remove("hidden");
+        showToast(`Welcome ${data.name}!`, "success");
     } else {
         document.getElementById("loginMessage").innerText = data.message;
+        showToast(data.message, "error");
     }
 }
 
@@ -113,21 +154,18 @@ async function sendScan(batchID) {
     if (data.success) {
         document.getElementById("scanMessage").innerText = data.message;
         document.getElementById("scanMessage").classList.add("success");
-        document.getElementById("scanMessage").classList.remove("error");
-
         if (navigator.vibrate) navigator.vibrate(200);
         if (data.remaining !== undefined) {
             document.getElementById("stockRemaining").innerText = data.remaining;
         }
-
         lastBatchID = batchID;
         document.getElementById("remainingBooks").value = data.remaining;
         document.getElementById("remainingInputSection").classList.remove("hidden");
-
+        showToast(`Scan recorded. Remaining: ${data.remaining}`, "success");
     } else {
         document.getElementById("scanMessage").innerText = data.message;
         document.getElementById("scanMessage").classList.add("error");
-        document.getElementById("scanMessage").classList.remove("success");
+        showToast(data.message, "error");
         startScanner();
     }
 }
@@ -144,7 +182,8 @@ async function submitRemaining() {
         body: JSON.stringify({
             action: "updateRemaining",
             batchID: lastBatchID,
-            remaining: parseInt(remaining)
+            remaining: parseInt(remaining),
+            coordinatorID: loggedInID // ✅ Added coordinator ID
         })
     });
     const data = await res.json();
@@ -152,14 +191,13 @@ async function submitRemaining() {
     if (data.success) {
         document.getElementById("scanMessage").innerText = data.message;
         document.getElementById("scanMessage").classList.add("success");
-        document.getElementById("scanMessage").classList.remove("error");
-
         document.getElementById("remainingInputSection").classList.add("hidden");
+        showToast(data.message, "success");
         startScanner();
     } else {
         document.getElementById("scanMessage").innerText = data.message;
         document.getElementById("scanMessage").classList.add("error");
-        document.getElementById("scanMessage").classList.remove("success");
+        showToast(data.message, "error");
     }
 }
 

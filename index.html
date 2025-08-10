@@ -43,6 +43,10 @@
         <div id="preview"></div>
         <p id="scanMessage" class="status"></p>
         <p>Stock Remaining: <span id="stockRemaining">-</span></p>
+        <div id="remainingInputSection" class="hidden">
+            <input type="number" id="remainingBooks" placeholder="Enter remaining books" min="0">
+            <button onclick="submitRemaining()">Submit Remaining</button>
+        </div>
     </div>
     <button onclick="stopScanner()">Logout</button>
 </div>
@@ -53,7 +57,8 @@
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycby2ZmHjCcc9qmn3tpmxff49NoHrzrMAqPuTLKTDKnV77DcON6fLGuTC2EQAOtnlZ2E_sQ/exec";
 let loggedInID = "";
-let qrScanner; // store instance so we can stop it later
+let qrScanner;
+let lastBatchID = "";
 
 async function login() {
     const id = document.getElementById("coordID").value.trim();
@@ -86,8 +91,13 @@ function startScanner() {
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
-            sendScan(decodedText);
-            qrScanner.stop().then(() => startScanner());
+            qrScanner.stop();
+            document.getElementById("scanMessage").innerText = "Processing...";
+            document.getElementById("scanMessage").classList.remove("error", "success");
+
+            setTimeout(() => {
+                sendScan(decodedText);
+            }, 2000); // 2s delay
         },
         () => {}
     ).catch(err => console.error("Camera start failed", err));
@@ -102,16 +112,54 @@ async function sendScan(batchID) {
 
     if (data.success) {
         document.getElementById("scanMessage").innerText = data.message;
-        document.getElementById("scanMessage").classList.remove("error");
         document.getElementById("scanMessage").classList.add("success");
+        document.getElementById("scanMessage").classList.remove("error");
+
         if (navigator.vibrate) navigator.vibrate(200);
         if (data.remaining !== undefined) {
             document.getElementById("stockRemaining").innerText = data.remaining;
         }
+
+        lastBatchID = batchID;
+        document.getElementById("remainingBooks").value = data.remaining;
+        document.getElementById("remainingInputSection").classList.remove("hidden");
+
     } else {
         document.getElementById("scanMessage").innerText = data.message;
-        document.getElementById("scanMessage").classList.remove("success");
         document.getElementById("scanMessage").classList.add("error");
+        document.getElementById("scanMessage").classList.remove("success");
+        startScanner();
+    }
+}
+
+async function submitRemaining() {
+    const remaining = document.getElementById("remainingBooks").value.trim();
+    if (remaining === "" || isNaN(remaining)) {
+        alert("Please enter a valid number");
+        return;
+    }
+
+    const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+            action: "updateRemaining",
+            batchID: lastBatchID,
+            remaining: parseInt(remaining)
+        })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+        document.getElementById("scanMessage").innerText = data.message;
+        document.getElementById("scanMessage").classList.add("success");
+        document.getElementById("scanMessage").classList.remove("error");
+
+        document.getElementById("remainingInputSection").classList.add("hidden");
+        startScanner();
+    } else {
+        document.getElementById("scanMessage").innerText = data.message;
+        document.getElementById("scanMessage").classList.add("error");
+        document.getElementById("scanMessage").classList.remove("success");
     }
 }
 

@@ -1,5 +1,5 @@
 // ---- IMPORTANT: replace with your deployed Apps Script web app URL ----
-const APPS_SCRIPT_URL = "YOUR_DEPLOY_URL_HERE";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4eA21V4vlEVX8zge3onIG5DtbBk41dudOyoYINN8Bjexl35QzT1kt-j0W1e7ul1dUPg/exec";
 
 const loginCard = document.getElementById('loginCard');
 const profileCard = document.getElementById('profileCard');

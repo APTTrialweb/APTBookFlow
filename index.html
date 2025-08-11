@@ -1,291 +1,131 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>APT BookFlow — Coordinator</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>APT BookFlow</title>
   <style>
-    :root{
-      --bg1:#071428; --bg2:#0f172a; --card: rgba(255,255,255,0.03);
-      --accent1:#06b6d4; --accent2:#3b82f6; --muted:#9aa8bd;
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
     }
-    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
-    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 100%); color:#e6eef6;padding:20px}
-    .card{width:100%;max-width:420px;background:var(--card);border-radius:14px;padding:22px;
-      box-shadow:0 8px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.04)}
-    h1{margin:0 0 8px;font-size:20px}
-    p.lead{margin:0 0 18px;color:var(--muted);font-size:13px}
-    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
-    input[type="text"], input[type="password"], input[type="number"]{
-      width:100%; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.04);
-      background:rgba(255,255,255,0.02); color:inherit; font-size:15px;
+    .card {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 350px;
+      text-align: center;
+      color: #fff;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
-    .btn{
-      display:inline-block;padding:12px 14px;border-radius:10px;border:none;font-weight:700;
-      color:#02121a;background:linear-gradient(90deg,var(--accent1),var(--accent2));
-      cursor:pointer;width:100%;font-size:15px;margin-top:8px;
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      outline: none;
+      font-size: 1rem;
     }
-    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
-    .muted{color:var(--muted);font-size:13px}
-    .center{text-align:center}
-    .profile{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:10px}
-    .avatar{width:110px;height:110px;border-radius:999px;overflow:hidden;border:3px solid var(--accent1);
-      display:inline-block;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));}
-    .avatar img{width:100%;height:100%;object-fit:cover;display:block}
-    #qr-reader{width:100%;border-radius:10px;overflow:hidden;margin-top:12px}
-    .hidden{display:none}
-    .status{padding:10px;border-radius:8px;margin-top:10px;font-weight:600}
-    .status.ok{background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.12)}
-    .status.err{background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.06)}
-    .small{font-size:13px;color:var(--muted)}
-    @media (max-width:440px){ .card{padding:18px} .avatar{width:92px;height:92px} }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #ff9800;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #e68900;
+    }
+    .hidden {
+      display: none;
+    }
+    img {
+      border-radius: 50%;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
-  <div class="card" id="app">
-
-    <!-- LOGIN -->
-    <div id="loginView">
-      <h1>APT BookFlow</h1>
-      <p class="lead">Coordinator sign in</p>
-
-      <label for="coordId">Coordinator ID</label>
-      <input id="coordId" type="text" placeholder="e.g. C1234" autocomplete="username">
-
-      <label for="coordPass">Password</label>
-      <input id="coordPass" type="password" placeholder="password" autocomplete="current-password">
-
-      <button id="loginBtn" class="btn">Login</button>
-
-      <p id="loginFeedback" class="status hidden"></p>
-      <p class="small center" style="margin-top:10px">If you don't have credentials yet, contact the coordinator admin.</p>
-    </div>
-
-    <!-- PROFILE & SCANNER -->
-    <div id="profileView" class="hidden">
-      <div class="profile">
-        <div class="avatar"><img id="profilePhoto" src="" alt="Coordinator photo"></div>
-        <div style="text-align:center">
-          <div id="profileName" style="font-size:16px;font-weight:700"></div>
-          <div id="profileId" class="muted small"></div>
-        </div>
-      </div>
-
-      <!-- optional small BatchID input (kept minimal) -->
-      <label for="batchId">Batch ID (optional)</label>
-      <input id="batchId" type="text" placeholder="e.g. Batch-2025-01">
-
-      <button id="startScanBtn" class="btn">📷 Scan QR Code</button>
-
-      <div id="qr-reader" class="hidden"></div>
-
-      <div id="remainingBox" class="hidden" style="margin-top:12px">
-        <label for="remainingInput">Remaining books</label>
-        <input id="remainingInput" type="number" min="0" placeholder="Enter remaining count">
-        <button id="submitBtn" class="btn" style="margin-top:10px">Submit</button>
-      </div>
-
-      <p id="submitFeedback" class="status hidden"></p>
-
-      <button id="logoutBtn" class="btn ghost" style="margin-top:12px">Logout</button>
-    </div>
-
+  <div class="card" id="loginCard">
+    <h2>Coordinator Login</h2>
+    <input type="text" id="coordId" placeholder="Coordinator ID" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Login</button>
+    <p id="loginMessage"></p>
   </div>
 
-  <!-- QR library -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.7/minified/html5-qrcode.min.js"></script>
+  <div class="card hidden" id="profileCard">
+    <img id="profilePic" src="" width="100" height="100" />
+    <h2 id="coordName"></h2>
+    <button onclick="startScan()">Scan QR</button>
+    <div id="scanSection" class="hidden">
+      <input type="text" id="qrCode" placeholder="Scanned QR Code" />
+      <input type="number" id="remaining" placeholder="Remaining Books" />
+      <button onclick="submitRemaining()">Submit</button>
+      <p id="updateMessage"></p>
+    </div>
+  </div>
 
   <script>
-    // ------------ CONFIG: paste your deployed Apps Script Web App URL here ------------
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec";
+    let loggedInCoordinatorId = "";
 
-    // ------------ UI refs
-    const loginView = document.getElementById('loginView');
-    const profileView = document.getElementById('profileView');
-    const loginBtn = document.getElementById('loginBtn');
-    const coordIdEl = document.getElementById('coordId');
-    const coordPassEl = document.getElementById('coordPass');
-    const loginFeedback = document.getElementById('loginFeedback');
+    function login() {
+      const id = document.getElementById('coordId').value;
+      const password = document.getElementById('password').value;
 
-    const profileNameEl = document.getElementById('profileName');
-    const profilePhotoEl = document.getElementById('profilePhoto');
-    const profileIdEl = document.getElementById('profileId');
-    const startScanBtn = document.getElementById('startScanBtn');
-    const qrReaderDiv = document.getElementById('qr-reader');
-    const remainingBox = document.getElementById('remainingBox');
-    const remainingInput = document.getElementById('remainingInput');
-    const submitBtn = document.getElementById('submitBtn');
-    const submitFeedback = document.getElementById('submitFeedback');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const batchIdEl = document.getElementById('batchId');
-
-    // state
-    let coordinator = null;
-    let scanner = null;
-    let lastScannedCode = "";
-
-    // helper UI funcs
-    function showLoginError(msg){ loginFeedback.className = 'status err'; loginFeedback.textContent = msg; loginFeedback.classList.remove('hidden'); }
-    function showLoginOk(msg){ loginFeedback.className = 'status ok'; loginFeedback.textContent = msg; loginFeedback.classList.remove('hidden'); }
-    function clearLoginMsg(){ loginFeedback.classList.add('hidden'); loginFeedback.textContent=''; }
-
-    function showSubmitOk(msg){ submitFeedback.className = 'status ok'; submitFeedback.textContent = msg; submitFeedback.classList.remove('hidden'); }
-    function showSubmitErr(msg){ submitFeedback.className = 'status err'; submitFeedback.textContent = msg; submitFeedback.classList.remove('hidden'); }
-    function clearSubmitMsg(){ submitFeedback.classList.add('hidden'); submitFeedback.textContent=''; }
-
-    // ------------ LOGIN: will call your Apps Script endpoint
-    loginBtn.addEventListener('click', async () => {
-      clearLoginMsg();
-      const id = coordIdEl.value.trim();
-      const pass = coordPassEl.value.trim();
-      if(!id || !pass){ showLoginError('Enter both ID and password'); return; }
-      if(!https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec){ showLoginError('Web App URL missing in code — paste it into WEB_APP_URL'); return; }
-
-      loginBtn.disabled = true;
-      loginBtn.textContent = 'Checking...';
-
-      try{
-        const resp = await fetch(https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'login', id, password: pass })
-        });
-        const data = await resp.json();
-
-        if(data && data.success){
-          // success — fill profile
-          coordinator = { id, name: data.name || id, photo: data.photo || '', raw: data };
-          profileNameEl.textContent = coordinator.name;
-          profileIdEl.textContent = coordinator.id;
-          profilePhotoEl.src = coordinator.photo || 'https://via.placeholder.com/300x300?text=Photo';
-          // switch views
-          loginView.classList.add('hidden');
-          profileView.classList.remove('hidden');
-          clearLoginMsg();
+      fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "login", id, password }),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          loggedInCoordinatorId = id;
+          document.getElementById('coordName').innerText = data.name;
+          document.getElementById('profilePic').src = data.photo || "https://via.placeholder.com/100";
+          document.getElementById('loginCard').classList.add('hidden');
+          document.getElementById('profileCard').classList.remove('hidden');
         } else {
-          showLoginError((data && data.message) ? data.message : 'Invalid credentials');
+          document.getElementById('loginMessage').innerText = "Invalid ID or Password";
         }
+      })
+      .catch(err => console.error(err));
+    }
 
-      }catch(err){
-        console.error(err);
-        showLoginError('Network error. Check Web App URL and deployment.');
-      } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Login';
-      }
-    });
+    function startScan() {
+      document.getElementById('scanSection').classList.remove('hidden');
+    }
 
-    // ------------ Start QR scanner
-    startScanBtn.addEventListener('click', async () => {
-      clearSubmitMsg();
-      remainingBox.classList.add('hidden');
-      remainingInput.value = '';
+    function submitRemaining() {
+      const qrCode = document.getElementById('qrCode').value;
+      const remaining = document.getElementById('remaining').value;
 
-      // show scanner area
-      qrReaderDiv.classList.remove('hidden');
-
-      // create and start html5-qrcode
-      // if there's an existing scanner, stop it first
-      if(scanner){
-        try{ await scanner.stop(); }catch(e){}
-        scanner = null;
-      }
-      scanner = new Html5Qrcode(/* element id */ "qr-reader");
-      try{
-        await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 280, height: 160 } },
-          qrMessage => {
-            // on successful scan
-            lastScannedCode = qrMessage;
-            // stop scanner
-            scanner.stop().then(() => {
-              qrReaderDiv.classList.add('hidden');
-              // show remaining input
-              remainingBox.classList.remove('hidden');
-            }).catch(()=>{ /* ignore */ });
-          },
-          errorMessage => {
-            // scan errors are frequent; ignore silently
-          }
-        );
-      }catch(err){
-        console.error(err);
-        showSubmitErr('Could not access the camera. Make sure permission granted.');
-        qrReaderDiv.classList.add('hidden');
-      }
-    });
-
-    // ------------ Submit scanned data to Apps Script
-    submitBtn.addEventListener('click', async () => {
-      clearSubmitMsg();
-      const rem = remainingInput.value.trim();
-      if(rem === ''){ showSubmitErr('Enter remaining books'); return; }
-      if(!lastScannedCode){ showSubmitErr('No QR scanned'); return; }
-      if(!https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec){ showSubmitErr('Web App URL missing in code'); return; }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
-
-      // payload: you can expand with more fields if needed
-      const payload = {
-        action: 'submit',
-        CoordinatorID: coordinator.id,
-        BatchID: batchIdEl.value.trim() || '',
-        QRCode: lastScannedCode,
-        Remaining: Number(rem),
-        IssuedBy: coordinator.name,
-        DateTime: new Date().toISOString()
-      };
-
-      try{
-        const resp = await fetch(https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await resp.json();
-        if(data && data.success){
-          showSubmitOk('✅ Saved successfully');
-          // reset for next scan
-          lastScannedCode = '';
-          remainingInput.value = '';
-          remainingBox.classList.add('hidden');
-        } else {
-          showSubmitErr((data && data.message) ? data.message : 'Save failed');
-        }
-      }catch(err){
-        console.error(err);
-        showSubmitErr('Network error while saving');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit';
-      }
-    });
-
-    // ------------ Logout - stop camera if running
-    logoutBtn.addEventListener('click', async () => {
-      clearSubmitMsg();
-      clearLoginMsg();
-      // stop camera if active
-      if(scanner){
-        try{ await scanner.stop(); }catch(e){}
-        qrReaderDiv.classList.add('hidden');
-        scanner = null;
-      }
-      // reset UI
-      profileView.classList.add('hidden');
-      loginView.classList.remove('hidden');
-      coordPassEl.value = '';
-      coordIdEl.value = '';
-      coordinator = null;
-      lastScannedCode = '';
-    });
-
-    // clean up on page hide/unload
-    window.addEventListener('pagehide', async () => {
-      if(scanner){ try{ await scanner.stop(); }catch(e){} }
-    });
+      fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "submit", qrCode, remaining, coordinatorId: loggedInCoordinatorId }),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('updateMessage').innerText = data.message;
+      })
+      .catch(err => console.error(err));
+    }
   </script>
 </body>
 </html>

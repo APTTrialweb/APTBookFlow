@@ -1,4 +1,4 @@
-const SCRIPT_URL = "YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4eA21V4vlEVX8zge3onIG5DtbBk41dudOyoYINN8Bjexl35QzT1kt-j0W1e7ul1dUPg/exec";
 
 function login() {
     const id = document.getElementById("coordinator-id").value.trim();

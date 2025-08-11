@@ -1,131 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>APT BookFlow</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .card {
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(10px);
-      border-radius: 15px;
-      padding: 2rem;
-      width: 90%;
-      max-width: 350px;
-      text-align: center;
-      color: #fff;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border: none;
-      border-radius: 8px;
-      outline: none;
-      font-size: 1rem;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #ff9800;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      color: white;
-      transition: 0.3s;
-    }
-    button:hover {
-      background: #e68900;
-    }
-    .hidden {
-      display: none;
-    }
-    img {
-      border-radius: 50%;
-      margin-bottom: 10px;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="card" id="loginCard">
-    <h2>Coordinator Login</h2>
-    <input type="text" id="coordId" placeholder="Coordinator ID" />
-    <input type="password" id="password" placeholder="Password" />
-    <button onclick="login()">Login</button>
-    <p id="loginMessage"></p>
-  </div>
+  <main class="container">
+    <section class="card" id="loginCard" aria-live="polite">
+      <div class="brand">
+        <div class="logo">APT</div>
+        <h1>Coordinator Login</h1>
+      </div>
 
-  <div class="card hidden" id="profileCard">
-    <img id="profilePic" src="" width="100" height="100" />
-    <h2 id="coordName"></h2>
-    <button onclick="startScan()">Scan QR</button>
-    <div id="scanSection" class="hidden">
-      <input type="text" id="qrCode" placeholder="Scanned QR Code" />
-      <input type="number" id="remaining" placeholder="Remaining Books" />
-      <button onclick="submitRemaining()">Submit</button>
-      <p id="updateMessage"></p>
-    </div>
-  </div>
+      <label class="field">
+        <input id="coordId" type="text" placeholder="Coordinator ID" autocomplete="username" />
+      </label>
 
-  <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec";
-    let loggedInCoordinatorId = "";
+      <label class="field">
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+      </label>
 
-    function login() {
-      const id = document.getElementById('coordId').value;
-      const password = document.getElementById('password').value;
+      <button id="loginBtn">Login</button>
+      <div class="muted" id="loginMessage"></div>
+    </section>
 
-      fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "login", id, password }),
-        headers: { "Content-Type": "application/json" }
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          loggedInCoordinatorId = id;
-          document.getElementById('coordName').innerText = data.name;
-          document.getElementById('profilePic').src = data.photo || "https://via.placeholder.com/100";
-          document.getElementById('loginCard').classList.add('hidden');
-          document.getElementById('profileCard').classList.remove('hidden');
-        } else {
-          document.getElementById('loginMessage').innerText = "Invalid ID or Password";
-        }
-      })
-      .catch(err => console.error(err));
-    }
+    <section class="card hidden" id="profileCard" aria-live="polite">
+      <div class="profile-top">
+        <img id="profilePic" src="https://via.placeholder.com/100" alt="Coordinator photo" />
+        <div>
+          <h2 id="coordName">Coordinator</h2>
+          <div class="muted small" id="coordIdLabel"></div>
+        </div>
+      </div>
 
-    function startScan() {
-      document.getElementById('scanSection').classList.remove('hidden');
-    }
+      <button id="startScanBtn">Scan / Input QR</button>
 
-    function submitRemaining() {
-      const qrCode = document.getElementById('qrCode').value;
-      const remaining = document.getElementById('remaining').value;
+      <div id="scanSection" class="scan-section hidden">
+        <label class="field">
+          <input id="qrCode" type="text" placeholder="Scanned QR Code" />
+        </label>
+        <label class="field">
+          <input id="remaining" type="number" min="0" placeholder="Remaining Books" />
+        </label>
+        <button id="submitRemainingBtn">Submit Remaining</button>
+        <div class="muted" id="updateMessage"></div>
+      </div>
 
-      fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "submit", qrCode, remaining, coordinatorId: loggedInCoordinatorId }),
-        headers: { "Content-Type": "application/json" }
-      })
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('updateMessage').innerText = data.message;
-      })
-      .catch(err => console.error(err));
-    }
-  </script>
+      <button id="logoutBtn" class="ghost">Logout</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>

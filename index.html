@@ -99,7 +99,7 @@
 
   <script>
     // ------------ CONFIG: replace this with your deployed Apps Script Web App URL ------------
-    const WEB_APP_URL = ""; // <-- paste your web app URL here (example: https://script.google.com/macros/s/....../exec)
+    const https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec = ""; // <-- paste your web app URL here (example: https://script.google.com/macros/s/....../exec)
 
     // ------------ UI refs
     const loginView = document.getElementById('loginView');
@@ -141,13 +141,13 @@
       const id = coordIdEl.value.trim();
       const pass = coordPassEl.value.trim();
       if(!id || !pass){ showLoginError('Enter both ID and password'); return; }
-      if(!WEB_APP_URL){ showLoginError('Web App URL missing in code — paste it into WEB_APP_URL'); return; }
+      if(!https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec){ showLoginError('Web App URL missing in code — paste it into WEB_APP_URL'); return; }
 
       loginBtn.disabled = true;
       loginBtn.textContent = 'Checking...';
 
       try{
-        const resp = await fetch(WEB_APP_URL, {
+        const resp = await fetch(https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'login', id, password: pass })
@@ -217,7 +217,7 @@
       const rem = remainingInput.value.trim();
       if(rem === ''){ showSubmitErr('Enter remaining books'); return; }
       if(!lastScannedCode){ showSubmitErr('No QR scanned'); return; }
-      if(!WEB_APP_URL){ showSubmitErr('Web App URL missing in code'); return; }
+      if(!https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec){ showSubmitErr('Web App URL missing in code'); return; }
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving...';
@@ -234,7 +234,7 @@
       };
 
       try{
-        const resp = await fetch(WEB_APP_URL, {
+        const resp = await fetch(https://script.google.com/macros/s/AKfycbxYKjrCsh6kGrJkUv4X1ILtLE86HTGKsRP2Qu02hT_8LTqF4zN6nJbHm9p8PY0fzJMxBA/exec, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)

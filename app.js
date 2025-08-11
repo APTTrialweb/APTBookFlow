@@ -1,99 +1,47 @@
-// ---- IMPORTANT: replace with your deployed Apps Script web app URL ----
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4eA21V4vlEVX8zge3onIG5DtbBk41dudOyoYINN8Bjexl35QzT1kt-j0W1e7ul1dUPg/exec";
+const SCRIPT_URL = "YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL";
 
-const loginCard = document.getElementById('loginCard');
-const profileCard = document.getElementById('profileCard');
-const loginBtn = document.getElementById('loginBtn');
-const startScanBtn = document.getElementById('startScanBtn');
-const submitRemainingBtn = document.getElementById('submitRemainingBtn');
-const logoutBtn = document.getElementById('logoutBtn');
+function login() {
+    const id = document.getElementById("coordinator-id").value.trim();
+    const password = document.getElementById("password").value.trim();
 
-let loggedInCoordinatorId = "";
-
-loginBtn.addEventListener('click', login);
-startScanBtn.addEventListener('click', () => document.getElementById('scanSection').classList.toggle('hidden'));
-submitRemainingBtn.addEventListener('click', submitRemaining);
-logoutBtn.addEventListener('click', logout);
-
-function showMessage(id, text, isError){
-  const el = document.getElementById(id);
-  el.textContent = text || "";
-  el.style.color = isError ? "#ffd2d2" : "";
+    fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", id, password })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById("login-section").style.display = "none";
+            document.getElementById("scan-section").style.display = "block";
+            document.getElementById("coordinator-name").textContent = data.name;
+            localStorage.setItem("coordinatorID", id);
+        } else {
+            alert("Invalid ID or Password");
+        }
+    })
+    .catch(err => console.error(err));
 }
 
-async function login(){
-  const id = document.getElementById('coordId').value.trim();
-  const password = document.getElementById('password').value.trim();
+function logScan() {
+    const batchID = document.getElementById("batch-id").value.trim();
+    const coordinatorID = localStorage.getItem("coordinatorID");
 
-  if(!id || !password){
-    showMessage('loginMessage', 'Please enter ID and password', true);
-    return;
-  }
+    if (!batchID) return alert("Enter Batch ID");
 
-  showMessage('loginMessage', 'Logging in...');
-
-  try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', id, password }),
-      credentials: 'omit'
-    });
-
-    const data = await resp.json();
-
-    if(data && data.success){
-      loggedInCoordinatorId = id;
-      document.getElementById('coordName').textContent = data.name || id;
-      document.getElementById('profilePic').src = data.photo || 'https://via.placeholder.com/100';
-      document.getElementById('coordIdLabel').textContent = `ID: ${id}`;
-
-      loginCard.classList.add('hidden');
-      profileCard.classList.remove('hidden');
-      showMessage('loginMessage', '');
-    } else {
-      showMessage('loginMessage', data.message || 'Invalid credentials', true);
-    }
-  } catch (err) {
-    console.error('Login fetch error:', err);
-    showMessage('loginMessage', 'Connection error. Open console for details', true);
-  }
-}
-
-async function submitRemaining(){
-  const qrCode = document.getElementById('qrCode').value.trim();
-  const remaining = document.getElementById('remaining').value.trim();
-
-  if(!qrCode || remaining === ''){
-    showMessage('updateMessage', 'Please fill QR Code and remaining count', true);
-    return;
-  }
-
-  showMessage('updateMessage', 'Submitting...');
-
-  try {
-    const resp = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'submit', qrCode, remaining: Number(remaining), coordinatorId: loggedInCoordinatorId }),
-      credentials: 'omit'
-    });
-
-    const data = await resp.json();
-    showMessage('updateMessage', data.message || (data.success ? 'Updated' : 'Error'), !data.success);
-  } catch (err) {
-    console.error('Submit fetch error:', err);
-    showMessage('updateMessage', 'Connection error. Open console for details', true);
-  }
-}
-
-function logout(){
-  loggedInCoordinatorId = "";
-  document.getElementById('coordId').value = '';
-  document.getElementById('password').value = '';
-  document.getElementById('qrCode').value = '';
-  document.getElementById('remaining').value = '';
-
-  profileCard.classList.add('hidden');
-  loginCard.classList.remove('hidden');
+    fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "logScan", coordinatorID, batchID })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById("result").textContent = `Scan logged for Batch: ${batchID}`;
+            document.getElementById("batch-id").value = "";
+        } else {
+            document.getElementById("result").textContent = "Error logging scan!";
+        }
+    })
+    .catch(err => console.error(err));
 }

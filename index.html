@@ -1,57 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>APT BookFlow</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <title>APT Online Daily Test</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="container">
-    <section class="card" id="loginCard" aria-live="polite">
-      <div class="brand">
-        <div class="logo">APT</div>
-        <h1>Coordinator Login</h1>
-      </div>
+<div class="container">
+    <h1>📚 Book Batch Scanner</h1>
+    
+    <div id="login-section">
+        <input type="text" id="coordinator-id" placeholder="Coordinator ID">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+    </div>
 
-      <label class="field">
-        <input id="coordId" type="text" placeholder="Coordinator ID" autocomplete="username" />
-      </label>
+    <div id="scan-section" style="display:none;">
+        <p>Welcome, <span id="coordinator-name"></span></p>
+        <input type="text" id="batch-id" placeholder="Enter or Scan Batch ID">
+        <button onclick="logScan()">Log Scan</button>
+        <div id="result"></div>
+    </div>
+</div>
 
-      <label class="field">
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-      </label>
-
-      <button id="loginBtn">Login</button>
-      <div class="muted" id="loginMessage"></div>
-    </section>
-
-    <section class="card hidden" id="profileCard" aria-live="polite">
-      <div class="profile-top">
-        <img id="profilePic" src="https://via.placeholder.com/100" alt="Coordinator photo" />
-        <div>
-          <h2 id="coordName">Coordinator</h2>
-          <div class="muted small" id="coordIdLabel"></div>
-        </div>
-      </div>
-
-      <button id="startScanBtn">Scan / Input QR</button>
-
-      <div id="scanSection" class="scan-section hidden">
-        <label class="field">
-          <input id="qrCode" type="text" placeholder="Scanned QR Code" />
-        </label>
-        <label class="field">
-          <input id="remaining" type="number" min="0" placeholder="Remaining Books" />
-        </label>
-        <button id="submitRemainingBtn">Submit Remaining</button>
-        <div class="muted" id="updateMessage"></div>
-      </div>
-
-      <button id="logoutBtn" class="ghost">Logout</button>
-    </section>
-  </main>
-
-  <script src="app.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
